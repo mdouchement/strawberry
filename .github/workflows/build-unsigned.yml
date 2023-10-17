@@ -1,0 +1,108 @@
+name: BuildUnsigned
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  build-macos:
+    name: Build macOS unsigned
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ 'macos-11', 'macos-arm64' ]
+        buildtype: [ 'release' ]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Set arch
+        shell: bash
+        run: echo "arch=$(uname -m)" >> $GITHUB_ENV
+
+      - name: Set buildtype
+        run: echo "buildtype=$(echo ${{matrix.buildtype}} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Set cmake buildtype
+        run: echo "cmake_buildtype=$(echo ${{env.buildtype}} | awk '{print toupper(substr($0,0,1))tolower(substr($0,2))}')" >> $GITHUB_ENV
+
+      - name: Uninstall homebrew
+        if: matrix.runner == 'macos-11'
+        run: |
+          curl -sfLO https://raw.githubusercontent.com/Homebrew/install/master/uninstall.sh
+          chmod +x ./uninstall.sh
+          sudo ./uninstall.sh --force
+          rm -f uninstall.sh
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download macOS dependencies
+        run: curl -f -O -L https://github.com/strawberrymusicplayer/strawberry-macos-dependencies/releases/latest/download/strawberry-macos-${{env.arch}}-${{env.buildtype}}.tar.xz
+
+      - name: Extract macOS dependencies
+        run: sudo tar -C / -xf strawberry-macos-${{env.arch}}-${{env.buildtype}}.tar.xz
+
+      - name: Set prefix path
+        run: echo "prefix_path=/opt/strawberry_macos_${{env.arch}}_${{env.buildtype}}" >> $GITHUB_ENV
+
+      - name: Update PATH
+        run: echo "${{env.prefix_path}}/bin" >> $GITHUB_PATH
+
+      - name: Create Build Environment
+        run: cmake -E make_directory build
+
+      - name: Configure CMake
+        env:
+          MACOSX_DEPLOYMENT_TARGET: 11.0
+          PKG_CONFIG_PATH: ${{env.prefix_path}}/lib/pkgconfig
+          LDFLAGS: -L${{env.prefix_path}}/lib -Wl,-rpath,${{env.prefix_path}}/lib
+        run: >
+          cmake
+          --log-level="DEBUG"
+          -S .
+          -B build
+          -DCMAKE_BUILD_TYPE="${{env.cmake_buildtype}}"
+          -DCMAKE_PREFIX_PATH="${{env.prefix_path}}/lib/cmake"
+          -DBUILD_WITH_QT6=ON
+          -DBUILD_WERROR=OFF
+          -DUSE_BUNDLE=ON
+          -DENABLE_DBUS=OFF
+          -DICU_ROOT="${{env.prefix_path}}"
+          -DFFTW3_DIR="${{env.prefix_path}}"
+          -DAPPLE_DEVELOPER_ID="383J84DVB6"
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 4
+
+      - name: Install
+        working-directory: build
+        run: make install
+
+      - name: Deploy
+        env:
+          GIO_EXTRA_MODULES: ${{env.prefix_path}}/lib/gio/modules
+          GST_PLUGIN_SCANNER: ${{env.prefix_path}}/libexec/gstreamer-1.0/gst-plugin-scanner
+          GST_PLUGIN_PATH: ${{env.prefix_path}}/lib/gstreamer-1.0
+          LIBSOUP_LIBRARY_PATH: ${{env.prefix_path}}/lib/libsoup-3.0.0.dylib
+        working-directory: build
+        run: make deploy
+
+      - name: Deploy check
+        working-directory: build
+        run: make deploycheck
+
+      - name: Create DMG
+        working-directory: build
+        run: make dmg
+
+      - name: macOS Publish app (amd64)
+        uses: actions/upload-artifact@v3
+        with:
+          path: build/*.dmg
+          name: strawberry-amd64.dmg
+        if: matrix.runner == 'macos-11'
+
+      - name: macOS Publish app (arm64)
+        uses: actions/upload-artifact@v3
+        with:
+          path: build/*.dmg
+          name: strawberry-arm64.dmg
+        if: matrix.runner == 'macos-arm64'
