@@ -98,13 +98,13 @@ jobs:
         with:
           path: build/strawberry.zip
           name: strawberry-x86_64.zip
+          retention-days: 30
         if: matrix.runner == 'macos-11'
-        retention-days: 30
 
       - name: macOS Publish app (arm64)
         uses: actions/upload-artifact@v3
         with:
           path: build/strawberry.zip
           name: strawberry-arm64.zip
+          retention-days: 30
         if: matrix.runner == 'macos-arm64'
-        retention-days: 30
