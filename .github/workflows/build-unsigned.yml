@@ -7,7 +7,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ 'macos-11', 'macos-arm64' ]
+        runner: [ 'macos-11' ] # [ 'macos-11', 'macos-arm64' ]
         buildtype: [ 'release' ]
     runs-on: ${{ matrix.runner }}
     steps:
