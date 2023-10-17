@@ -89,20 +89,22 @@ jobs:
         working-directory: build
         run: make deploycheck
 
-      - name: Create DMG
+      - name: ZIP artifact
         working-directory: build
-        run: make dmg
+        run: zip -r strawberry.zip strawberry.app
 
-      - name: macOS Publish app (amd64)
+      - name: macOS Publish app (x86_64)
         uses: actions/upload-artifact@v3
         with:
-          path: build/*.dmg
-          name: strawberry-amd64.dmg
+          path: build/strawberry.zip
+          name: strawberry-x86_64.zip
         if: matrix.runner == 'macos-11'
+        retention-days: 30
 
       - name: macOS Publish app (arm64)
         uses: actions/upload-artifact@v3
         with:
-          path: build/*.dmg
-          name: strawberry-arm64.dmg
+          path: build/strawberry.zip
+          name: strawberry-arm64.zip
         if: matrix.runner == 'macos-arm64'
+        retention-days: 30
