@@ -1,10 +1,10 @@
 name: Build
 on:
-  push:
+  # push:
   pull_request:
     types: [opened, synchronize, reopened]
-  release:
-    types: [published]
+  # release:
+  #   types: [published]
 
 jobs:
 
