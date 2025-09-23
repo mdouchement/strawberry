@@ -9,7 +9,7 @@ jobs:
       matrix:
         # https://github.com/actions/runner-images?tab=readme-ov-file#available-images
         # https://github.com/actions/runner-images/tree/main/images/macos
-        runner: [ 'macos-15-intel' ] # [ 'macos-15-intel', 'macos-15' ]
+        runner: [ 'macos-15-intel', 'macos-15' ] # [ 'macos-15-intel', 'macos-15' ]
         buildtype: [ 'release' ]
     runs-on: ${{ matrix.runner }}
     steps:
